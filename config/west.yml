@@ -2,34 +2,33 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    - name: gpeye
-      url-base: https://github.com/GPeye
-    - name: tokyo2006
-      url-base: https://github.com/tokyo2006
+    # dongle_display
     - name: englmaxi
       url-base: https://github.com/englmaxi
-    # support nice_oled and nice_epaper
+    # nice_oled - nice_epaper - dongle_display!view - oled Adapter
     - name: mctechnology17
       url-base: https://github.com/mctechnology17
   projects:
-    - name: mario-peripheral-animation
-      remote: gpeye
-      revision: main 
     - name: zmk
       remote: zmkfirmware
       revision: v0.3.0
       import: app/west.yml
-    - name: prospector-zmk-module                 # <--- and these
-      remote: tokyo2006                          # <---
-      revision: micro_spi2  
+    # dongle_display
     - name: zmk-dongle-display
       remote: englmaxi
       revision: v0.3
     # support nice_oled and nice_epaper
+    # nice_oled - nice_epaper
     - name: zmk-nice-oled
+      remote: mctechnology17
+      revision: main
+    # dongle_display!view
+    - name: zmk-dongle-display-view
+      remote: mctechnology17
+      revision: main
+    # oled Adapter
+    - name: zmk-oled-adapter
       remote: mctechnology17
       revision: main
   self:
     path: config
-
-
