@@ -8,6 +8,9 @@ manifest:
       url-base: https://github.com/tokyo2006
     - name: englmaxi
       url-base: https://github.com/englmaxi
+    # support nice_oled and nice_epaper
+    - name: mctechnology17
+      url-base: https://github.com/mctechnology17
   projects:
     - name: mario-peripheral-animation
       remote: gpeye
@@ -22,5 +25,11 @@ manifest:
     - name: zmk-dongle-display
       remote: englmaxi
       revision: v0.3
+    # support nice_oled and nice_epaper
+    - name: zmk-nice-oled
+      remote: mctechnology17
+      revision: main
   self:
     path: config
+
+
