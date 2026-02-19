@@ -1,16 +1,82 @@
-#define ZMK_POINTING_DEFAULT_MOVE_VAL 1200  // 600
-#define ZMK_POINTING_DEFAULT_SCRL_VAL 35    // 10
+/*
+ * =============================================================================
+ * ZMK KEYMAP — Ported from QMK Sofle Layout
+ * =============================================================================
+ *
+ * This is a port of the QMK Sofle keymap (qmk.keymap.c) to ZMK for the
+ * Eyelash Sofle board (with dongle support).
+ *
+ * KEY DIFFERENCES BETWEEN YOUR QMK SOFLE AND THIS EYELASH SOFLE:
+ * ---------------------------------------------------------------
+ * 1. LAYOUT SIZE:
+ *    - QMK Sofle:     6L + 6R per row (rows 0-2), 7+7 row 3 (encoders), 5+5 row 4
+ *    - Eyelash Sofle: 6L + 1 MIDDLE + 6R per row (rows 0-3), 6+1+5 row 4
+ *    The "middle" column is a 5-way joystick/trackball on the right half PCB.
+ *
+ * 2. ENCODERS:
+ *    - QMK: 2 encoders (left=MUTE click, right=HOME click)
+ *    - Eyelash: 1 left encoder (click = row 4, col 0) + joystick in middle
+ *
+ * 3. SYNTAX:
+ *    - QMK uses C macros:  KC_A, MO(1), LT(3, KC_TAB), TD(TD_ESC_GRV)
+ *    - ZMK uses devicetree: &kp A, &mo 1, &lt 3 TAB, &td_esc_grv
+ *
+ * 4. TAP DANCE:
+ *    - QMK: Defined with tap_dance_actions[] and ACTION_TAP_DANCE_DOUBLE()
+ *    - ZMK: Defined as "zmk,behavior-tap-dance" nodes in the behaviors {} block
+ *
+ * 5. LAYER TAP:
+ *    - QMK: LT(_NUMPAD, KC_TAB) — custom #define
+ *    - ZMK: &lt 3 TAB — built-in behavior, no #define needed
+ *
+ * 6. RGB/BACKLIGHT:
+ *    - QMK: UG_TOGG, LM_TOGG, etc.
+ *    - ZMK: &rgb_ug RGB_TOG for underglow. Backlight not always available.
+ *
+ * LAYER MAP:
+ *   Layer 0 = QWERTY (base)
+ *   Layer 1 = SYMBOL (held via left thumb "mo 1")
+ *   Layer 2 = MOVE   (held via right thumb "mo 2")
+ *   Layer 3 = NUMPAD (held via TAB key "lt 3 TAB")
+ *   Layer 4 = ADJUST (auto-enabled while SYMBOL + MOVE are both held)
+ * =============================================================================
+ */
 
-#include <input/processors.dtsi>
-#include <zephyr/dt-bindings/input/input-event-codes.h>
-#include <behaviors.dtsi>
-#include <dt-bindings/zmk/bt.h>
-#include <dt-bindings/zmk/keys.h>
-#include <dt-bindings/zmk/outputs.h>
-#include <dt-bindings/zmk/pointing.h>
-#include <dt-bindings/zmk/rgb.h>
+/* ── Pointing device speed tuning ─────────────────────────────────────────────
+ * These set how fast the trackball/joystick moves the mouse cursor and scrolls.
+ * Increase values = faster. Decrease = more precise.
+ * In QMK, you'd set these in config.h as POINTING_DEVICE_* defines.
+ */
+#define ZMK_POINTING_DEFAULT_MOVE_VAL 1200  // Default: 600. Mouse cursor speed.
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 35    // Default: 10. Scroll wheel speed.
+
+/* ── Includes ─────────────────────────────────────────────────────────────────
+ * QMK: #include QMK_KEYBOARD_H  (one include that pulls in everything)
+ * ZMK: You include individual modules you need. Each header enables specific
+ *       features (bluetooth, keys, RGB, etc.)
+ */
+#include <input/processors.dtsi>                          // Input processing (scaling mouse/scroll)
+#include <zephyr/dt-bindings/input/input-event-codes.h>   // Low-level input event codes
+#include <behaviors.dtsi>                                  // Core behaviors: &kp, &mo, &lt, &none, &trans, etc.
+#include <dt-bindings/zmk/bt.h>                            // Bluetooth: &bt BT_SEL, BT_CLR, etc.
+#include <dt-bindings/zmk/keys.h>                          // All keycodes: A-Z, N0-N9, F1-F12, modifiers, etc.
+#include <dt-bindings/zmk/outputs.h>                       // Output selection: &out OUT_USB, OUT_BLE
+#include <dt-bindings/zmk/pointing.h>                      // Pointing device: &mmv (mouse move), &mkp (mouse click), &msc (scroll)
+#include <dt-bindings/zmk/rgb.h>                           // RGB underglow: &rgb_ug RGB_TOG, RGB_EFF, etc.
+
+/* ═════════════════════════════════════════════════════════════════════════════
+ * DEVICETREE HARDWARE CONFIGURATION
+ * ═════════════════════════════════════════════════════════════════════════════
+ * Everything below the "/" is a "devicetree" node. This is Zephyr (the RTOS
+ * ZMK is built on) way of describing hardware. There's NO equivalent in QMK.
+ * Think of it as a structured config.h + hardware description combined.
+ */
 
 / {
+    /* ── Scroll Scaler ────────────────────────────────────────────────────────
+     * Scales the scroll wheel input. The "2 1" in the listener means 2x scale.
+     * This makes scrolling faster/more responsive.
+     */
     zip_scroll_scaler: zip_scroll_scaler {
         compatible = "zmk,input-processor-scaler";
         #input-processor-cells = <2>;
@@ -20,30 +86,70 @@
     };
 };
 
+/* ── Input Listener Overrides ─────────────────────────────────────────────────
+ * These hook into the pointing device hardware and apply scaling.
+ * &mmv_input_listener = mouse movement listener (trackball/joystick XY)
+ * &msc_input_listener = scroll listener (scroll wheel events)
+ */
 &mmv_input_listener { input-processors = <&zip_xy_scaler 2 1>; };
-
 &msc_input_listener { input-processors = <&zip_scroll_scaler 2 1>; };
 
+/* ── Mouse Scroll Tuning ──────────────────────────────────────────────────────
+ * acceleration-exponent = 0 means linear (no acceleration curve)
+ * time-to-max-speed-ms = 0 means instant max speed
+ * In QMK: MOUSEKEY_WHEEL_MAX_SPEED, MOUSEKEY_WHEEL_TIME_TO_MAX
+ */
 &msc {
-    acceleration-exponent = <0>;      // 0
-    time-to-max-speed-ms = <0>;       // 300
-    delay-ms = <0>;                   // 0
+    acceleration-exponent = <0>;
+    time-to-max-speed-ms = <0>;
+    delay-ms = <0>;
 };
 
+/* ── Mouse Move Tuning ────────────────────────────────────────────────────────
+ * time-to-max-speed-ms = 400 means cursor ramps up to full speed over 400ms
+ * acceleration-exponent = 1 means linear acceleration
+ * In QMK: MOUSEKEY_MAX_SPEED, MOUSEKEY_TIME_TO_MAX
+ */
 &mmv {
     time-to-max-speed-ms = <400>;
     acceleration-exponent = <1>;
 };
 
+/* ── Hold-Tap / Layer-Tap Tuning ─────────────────────────────────────────────
+ * Slightly tap-biased timing to reduce accidental NUMPAD layer activation
+ * during fast typing on &lt 3 TAB.
+ */
+&lt {
+    tapping-term-ms = <180>;
+    quick-tap-ms = <140>;
+    flavor = "tap-preferred";
+};
+
+/* ═════════════════════════════════════════════════════════════════════════════
+ * BEHAVIORS, MACROS, AND KEYMAP
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
 / {
+    /* ── Scroll Encoder Behavior ──────────────────────────────────────────────
+     * In QMK, encoder behavior is set in encoder_map[][] or encoder_update_user().
+     * In ZMK, you define a "sensor-rotate" behavior and bind it per-layer.
+     *
+     * This one scrolls up/down when the encoder is rotated.
+     * Layer 0 uses volume (inc_dec_kp), other layers use this scroll behavior.
+     */
     scroll_encoder: scroll_encoder {
         compatible = "zmk,behavior-sensor-rotate";
         #sensor-binding-cells = <0>;
         bindings = <&msc SCRL_DOWN>, <&msc SCRL_UP>;
-
         tap-ms = <30>;
     };
 
+    /* ── Macros ───────────────────────────────────────────────────────────────
+     * ZMK macros use a press/release/pause model.
+     * QMK equivalent: process_record_user() or MACRO() definitions.
+     *
+     * This macro holds Shift + Middle Mouse Button (for some apps like browsers).
+     */
     macros {
         shift_MB3: shift_MB3 {
             compatible = "zmk,behavior-macro";
@@ -53,69 +159,387 @@
                 <&kp LEFT_SHIFT>,
                 <&macro_press>,
                 <&mkp MB3>,
-                <&macro_pause_for_release>,
+                <&macro_pause_for_release>,   // Waits until the key is released
                 <&macro_release>,
                 <&mkp MB3 &kp LEFT_SHIFT>;
-
             label = "SHIFT_MB3";
         };
     };
 
+    /* ══════════════════════════════════════════════════════════════════════════
+     * TAP DANCE BEHAVIORS
+     * ══════════════════════════════════════════════════════════════════════════
+     * QMK: tap_dance_actions[] with ACTION_TAP_DANCE_DOUBLE()
+     * ZMK: Individual "zmk,behavior-tap-dance" nodes.
+     *
+     * How tap-dance works:
+     *   - Tap once  → first binding fires
+     *   - Tap twice → second binding fires
+     *   - tapping-term-ms = time window to register double-tap (like QMK's TAPPING_TERM)
+     *
+     * IMPORTANT: In ZMK, tap-dance behaviors are referenced by their node name
+     * (e.g., &td_esc_grv), NOT by an enum index like QMK's TD(TD_ESC_GRV).
+     */
     behaviors {
+        /* Tap = ESC, Double-tap = ` (grave/backtick)
+         * QMK equivalent: TD_ESC_GRV = ACTION_TAP_DANCE_DOUBLE(KC_ESC, KC_GRV)
+         */
+        td_esc_grv: td_esc_grv {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <200>;
+            bindings = <&kp ESC>, <&kp GRAVE>;
+        };
+
+        /* Tap = Left Shift, Double-tap = Caps Lock
+         * QMK equivalent: TD_LSHIFT_CAPS = ACTION_TAP_DANCE_DOUBLE(KC_LSFT, KC_CAPS)
+         */
+        td_lshift_caps: td_lshift_caps {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <200>;
+            bindings = <&kp LSHFT>, <&kp CAPS>;
+        };
+
+        /* Tap = Right Shift, Double-tap = Caps Lock
+         * QMK equivalent: TD_RSHIFT_CAPS = ACTION_TAP_DANCE_DOUBLE(KC_RSFT, KC_CAPS)
+         */
+        td_rshift_caps: td_rshift_caps {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <200>;
+            bindings = <&kp RSHFT>, <&kp CAPS>;
+        };
+
+        /* Tap = Mute, Double-tap = Play/Pause
+         * QMK equivalent: TD_MUTE_PLAY = ACTION_TAP_DANCE_DOUBLE(KC_MUTE, KC_MPLY)
+         * Used on the encoder button press.
+         */
+        td_mute_play: td_mute_play {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <200>;
+            bindings = <&kp C_MUTE>, <&kp C_PP>;
+        };
+
+        td_sys_reset_safe: td_sys_reset_safe {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <220>;
+            bindings = <&none>, <&sys_reset>;
+        };
+
+        td_soft_off_safe: td_soft_off_safe {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <220>;
+            bindings = <&none>, <&soft_off>;
+        };
+
+        td_bootloader_safe: td_bootloader_safe {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <220>;
+            bindings = <&none>, <&bootloader>;
+        };
     };
 
+    conditional_layers {
+        compatible = "zmk,conditional-layers";
+
+        adjust_layer {
+            if-layers = <1 2>;
+            then-layer = <4>;
+        };
+    };
+
+    /* ══════════════════════════════════════════════════════════════════════════
+     * KEYMAP
+     * ══════════════════════════════════════════════════════════════════════════
+     * QMK:  const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = { ... };
+     * ZMK:  keymap { compatible = "zmk,keymap"; layer_name { bindings = <...>; }; };
+     *
+     * PHYSICAL LAYOUT OF THE EYELASH SOFLE (per row):
+     * ┌───────────── Left Half (6 keys) ──────────────┐ ┌Mid┐ ┌────────── Right Half (6 keys) ──────────┐
+     * │ Col0 │ Col1 │ Col2 │ Col3 │ Col4 │ Col5 │     │Col7│  │ Col8 │ Col9 │Col10│Col11│Col12│Col13│
+     *
+     * Row 4 (thumb row) has 6 left + 1 middle + 5 right = 12 keys total.
+     * The middle column (Col7) is the joystick/trackball 5-way switch.
+     *
+     * READING THE BINDINGS:
+     *   &kp A        = "key press" behavior, sends 'A'
+     *   &mo 1        = "momentary layer" — activates layer 1 while held
+     *   &lt 3 TAB    = "layer-tap" — hold = layer 3, tap = TAB
+     *   &td_esc_grv  = custom tap-dance (defined above)
+     *   &trans       = transparent — falls through to lower layer (like QMK's _______)
+     *   &none        = no action (like QMK's XXXXXXX)
+     *   &rgb_ug CMD  = RGB underglow command
+     *   &bt CMD      = Bluetooth command
+     *   &mmv DIR     = mouse move direction
+     *   &mkp BTN     = mouse button press
+     */
     keymap {
         compatible = "zmk,keymap";
 
-        layer0 {
+        /* ══════════════════════════════════════════════════════════════════════
+         * LAYER 0 — QWERTY (Base Layer)
+         * ══════════════════════════════════════════════════════════════════════
+         *
+         * ┌────────┬──────┬──────┬──────┬──────┬──────┐          ┌──────┬──────┬──────┬──────┬──────┬──────┐
+         * │ESC/GRV │  1   │  2   │  3   │  4   │  5   │  [JOY↑] │  6   │  7   │  8   │  9   │  0   │  -   │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  DEL   │  Q   │  W   │  E   │  R   │  T   │  [JOY↓] │  Y   │  U   │  I   │  O   │  P   │ BSPC │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │TAB/NUM │  A   │  S   │  D   │  F   │  G   │  [JOY←] │  H   │  J   │  K   │  L   │  ;   │  '   │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │ LGUI   │  Z   │  X   │  C   │  V   │  B   │  [JOY→] │  N   │  M   │  ,   │  .   │  /   │ENTER │
+         * └────────┴──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┘
+         *  [MUTE/PLAY]    │ LCTL │ LALT │LSH/CP│SYMBOL│ SPACE    │HOME  │SPACE │ MOVE │RSH/CP│ RALT │ RCTL │
+         *                 └──────┴──────┴──────┴──────┘          └──────┴──────┴──────┴──────┴──────┘
+         *
+         * QMK → ZMK key mapping for this layer:
+         *   KC_ESC_GRV      → &td_esc_grv         (tap-dance: tap=ESC, 2x=`)
+         *   KC_TAB_NUM      → &lt 3 TAB           (layer-tap: hold=NUMPAD, tap=TAB)
+         *   KC_LSHIFT_CAPS  → &td_lshift_caps     (tap-dance: tap=LSHIFT, 2x=CAPS)
+         *   KC_RSHIFT_CAPS  → &td_rshift_caps     (tap-dance: tap=RSHIFT, 2x=CAPS)
+         *   KC_MUTE_PLAY    → &td_mute_play       (tap-dance: tap=MUTE, 2x=PLAY)
+         *   KC_SYMBO/MO()   → &mo 1               (momentary layer 1)
+         *   KC_MOVE/MO()    → &mo 2               (momentary layer 2)
+         *   KC_MINS         → &kp MINUS            (ZMK uses full names, not KC_ prefix)
+         *   KC_BSPC         → &kp BSPC             (backspace)
+         *   KC_SCLN         → &kp SEMI             (semicolon)
+         *   KC_QUOT         → &kp SQT              (single quote / apostrophe)
+         *   KC_COMM         → &kp COMMA            (comma)
+         *   KC_SLSH         → &kp FSLH             (forward slash)
+         *
+         * MIDDLE COLUMN: The joystick/trackball 5-way switch. Mapped to arrow keys
+         * on Layer 0 so it works as a directional pad. On other layers, it can be
+         * remapped to mouse movement (&mmv) or other functions.
+         *
+         * ENCODER: Rotate = Volume Up/Down. Click = MUTE (or double-click = PLAY).
+         */
+        layer_qwerty {
+            display-name = "QWERTY";
             bindings = <
-&kp ESC     &kp N1     &kp N2        &kp N3        &kp N4  &kp N5       &kp UP_ARROW     &kp N6     &kp N7     &kp N8     &kp N9           &kp N0      &kp BACKSPACE
-&kp TAB     &kp Q      &kp W         &kp E         &kp R   &kp T        &kp DOWN_ARROW   &kp Y      &kp U      &kp I      &kp O            &kp P       &kp BSLH
-&kp CAPS    &kp A      &kp S         &kp D         &kp F   &kp G        &kp LEFT_ARROW   &kp H      &kp J      &kp K      &kp L            &kp SEMI    &kp APOS
-&kp LSHFT   &kp Z      &kp X         &kp C         &kp V   &kp B        &kp RIGHT_ARROW  &kp N      &kp M      &kp COMMA  &kp DOT          &kp FSLH    &kp ENTER
-&kp C_MUTE  &kp LCTRL  &kp LEFT_GUI  &kp LEFT_ALT  &mo 1   &kp SPACE    &kp ENTER        &kp SPACE  &kp ENTER  &mo 2      &kp RIGHT_SHIFT  &kp DELETE
+// ┌─ Left Half (6 keys) ─────────────────────────────────────────────────┐ ┌───Mid───┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
+    &td_esc_grv    &kp N1     &kp N2    &kp N3           &kp N4  &kp N5      &kp UP      &kp N6     &kp N7  &kp N8           &kp N9    &kp N0     &kp MINUS
+    &kp DEL        &kp Q      &kp W     &kp E            &kp R   &kp T       &kp DOWN    &kp Y      &kp U   &kp I            &kp O     &kp P      &kp BSPC
+    &lt 3 TAB      &kp A      &kp S     &kp D            &kp F   &kp G       &kp LEFT    &kp H      &kp J   &kp K            &kp L     &kp SEMI   &kp SQT
+    &kp LGUI       &kp Z      &kp X     &kp C            &kp V   &kp B       &kp RIGHT   &kp N      &kp M   &kp COMMA        &kp DOT   &kp FSLH   &kp ENTER
+    &td_mute_play  &kp LCTRL  &kp LALT  &td_lshift_caps  &mo 1   &kp SPACE   &kp HOME    &kp SPACE  &mo 2   &td_rshift_caps  &kp RALT  &kp RCTRL
             >;
 
+            /* ENCODER BINDING (Layer 0):
+             * Rotate clockwise = Volume Up
+             * Rotate counter-clockwise = Volume Down
+             * QMK equivalent: encoder_update_user() with KC_VOLU/KC_VOLD
+             */
             sensor-bindings = <&inc_dec_kp C_VOLUME_UP C_VOL_DN>;
-            display-name = "LAYER0";
         };
 
-        layer_1 {
+        /* ══════════════════════════════════════════════════════════════════════
+         * LAYER 1 — SYMBOL
+         * ══════════════════════════════════════════════════════════════════════
+         * Activated by holding the left thumb key (SYMBOL / mo 1).
+         * NOTE: RGB/BT/system settings were moved to Layer 4 (ADJUST).
+         * This layer is now focused on symbols, media, and mouse actions.
+         *
+         * ┌────────┬──────┬──────┬──────┬──────┬──────┐          ┌──────┬──────┬──────┬──────┬──────┬──────┐
+         * │  ___   │  F1  │  F2  │  F3  │  F4  │  F5  │ [mouse↑]│  F6  │  F7  │  F8  │  F9  │ F10  │ F11  │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │  `   │ LClk │ MClk │ RClk │ MB4  │ [mouse↓]│ PREV │      │      │  [   │  ]   │ F12  │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │  ~   │      │      │      │ MB5  │ [mouse←]│ PLAY │      │      │  {   │  }   │  |   │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │RGBOFF│RGBON │RGBEFF│RGBEFR│RGBSPI│ [mouse→]│ NEXT │RGBBRI│RGBBRD│  =   │  \   │ INS  │
+         * └────────┴──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┘
+         *    [___]        │ ___  │ ___  │ ___  │(held)│  ___     │click │ ___  │ ___  │ ___  │ ___  │ ___  │
+         *                 └──────┴──────┴──────┴──────┘          └──────┴──────┴──────┴──────┴──────┘
+         *
+         * QMK → ZMK key mapping for this layer:
+         *   KC_MPRV → &kp C_PREV    (media previous — consumer keycode, hence C_ prefix)
+         *   KC_MPLY → &kp C_PP      (media play/pause)
+         *   KC_MNXT → &kp C_NEXT    (media next)
+         *   KC_LBRC → &kp LBKT      (QMK's LBRC = '[', ZMK's LBKT = '[')  ← NAMING GOTCHA!
+         *   KC_RBRC → &kp RBKT      (QMK's RBRC = ']', ZMK's RBKT = ']')  ← NAMING GOTCHA!
+         *   KC_LCBR → &kp LBRC      (QMK's LCBR = '{', ZMK's LBRC = '{')  ← NAMING GOTCHA!
+         *   KC_RCBR → &kp RBRC      (QMK's RCBR = '}', ZMK's RBRC = '}')  ← NAMING GOTCHA!
+         *   KC_PIPE → &kp PIPE      (pipe character, internally LS(BSLH))
+         *   KC_BSLS → &kp BSLH      (backslash)
+         *   KC_EQL  → &kp EQUAL     (equals sign)
+         *   KC_INS  → &kp INS       (insert key)
+         *
+         * NEW ZMK-ONLY FEATURES ON THIS LAYER (not in QMK):
+         *   Mouse buttons on left side — your Eyelash Sofle has a joystick/trackball.
+         *   &mkp LCLK/MCLK/RCLK/MB4/MB5 = mouse left/middle/right/back/forward click
+         *   These give you full mouse control when combined with joystick movement.
+         *
+         *   RGB controls on row 3 — full underglow management:
+         *   &rgb_ug RGB_OFF/ON  = force RGB off/on
+         *   &rgb_ug RGB_EFF/EFR = next/previous effect
+         *   &rgb_ug RGB_SPI     = speed up animation
+         *   &rgb_ug RGB_BRI/BRD = increase/decrease brightness
+         *
+         * NOTE ON BRACKET NAMING:
+         *   QMK:  LBRC = [  RBRC = ]  LCBR = {  RCBR = }
+         *   ZMK:  LBKT = [  RBKT = ]  LBRC = {  RBRC = }
+         *   This is a common source of confusion when porting! ZMK uses "bracket"
+         *   for [ ] and "brace" for { }.
+         *
+         * MIDDLE COLUMN: Mouse move directions — the joystick moves the cursor
+         * when this layer is active. Bottom = mouse left click.
+         */
+        layer_symbol {
+            display-name = "SYMBOL";
             bindings = <
-&kp GRAVE   &kp F1           &kp F2          &kp F3           &kp F4           &kp F5             &mmv MOVE_UP     &kp F6           &kp F7           &kp F8      &kp F9     &kp F10           &trans
-&trans      &kp GRAVE        &mkp LCLK       &mkp MCLK        &mkp RCLK        &mkp MB4           &mmv MOVE_DOWN   &kp PG_UP        &kp END          &kp UP      &kp HOME   &kp MINUS         &kp EQUAL
-&trans      &kp TILDE        &trans          &trans           &trans           &mkp MB5           &mmv MOVE_LEFT   &kp PG_DN        &kp LEFT         &kp DOWN    &kp RIGHT  &kp LEFT_BRACKET  &kp RIGHT_BRACKET
-&trans      &rgb_ug RGB_OFF  &rgb_ug RGB_ON  &rgb_ug RGB_EFF  &rgb_ug RGB_EFR  &rgb_ug RGB_SPI    &mmv MOVE_RIGHT  &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &kp INSERT  &kp F11    &kp F12           &trans
-&kp C_MUTE  &trans           &trans          &trans           &trans           &trans             &mkp LCLK        &trans           &trans           &trans      &trans     &trans
+// ┌─ Left Half (6 keys) ─────────────────────────────────────────────────────────────────────┐ ┌─────Mid───────┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
+    &trans  &kp F1           &kp F2          &kp F3           &kp F4           &kp F5            &mmv MOVE_UP      &kp F6      &kp F7           &kp F8           &kp F9     &kp F10   &kp F11
+    &trans  &none            &none           &kp C_PREV       &kp C_PP         &kp C_NEXT        &mmv MOVE_DOWN    &none       &none            &none            &kp LBKT   &kp RBKT  &kp F12
+    &trans  &none            &mkp RCLK       &mkp MCLK        &mkp LCLK        &mkp MB4          &mmv MOVE_LEFT    &none       &none            &none            &kp LBRC   &kp RBRC  &kp PIPE
+    &trans  &none            &none           &none            &none            &mkp MB5          &mmv MOVE_RIGHT   &none       &none            &none            &kp EQUAL  &kp BSLH  &kp INS
+    &trans  &trans           &trans          &trans           &trans           &trans            &mkp LCLK         &trans      &trans           &trans           &trans     &trans
             >;
 
-            display-name = "layer1";
+            /* ENCODER BINDING (Layer 1):
+             * Rotate = Scroll up/down (useful for browsing code or documents)
+             * This overrides the volume control from Layer 0.
+             */
             sensor-bindings = <&scroll_encoder>;
         };
 
-        layer_2 {
+        /* ══════════════════════════════════════════════════════════════════════
+         * LAYER 2 — MOVE (Navigation + Editing + Pointer)
+         * ══════════════════════════════════════════════════════════════════════
+         * Activated by holding the right thumb key (MOVE / mo 2).
+         * NOTE: BT/RGB/system controls now live on Layer 4 (ADJUST).
+         *
+         * ┌────────┬──────┬──────┬──────┬──────┬──────┐          ┌──────┬──────┬──────┬──────┬──────┬──────┐
+         * │  ___   │ BT 0 │ BT 1 │ BT 2 │ BT 3 │ BT 4 │ [mouse↑]│RGBTOG│RGBPV │RGBNX │RGBSPU│RGBSPD│ ___  │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │BTCLR │BTALL │ USB  │ BLE  │      │ [mouse↓]│ PgUp │      │  ↑   │      │      │ ___  │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │      │      │      │RGBBD │RGBBI │ [mouse←]│ PgDn │  ←   │  ↓   │  →   │      │ ___  │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │  ___   │ Undo │ Cut  │ Copy │Paste │      │ [mouse→]│ Home │ End  │RESET │S.OFF │BOOTLD│ ___  │
+         * └────────┴──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┘
+         *    [___]        │ ___  │ ___  │ ___  │ ___  │  ___     │click │ ___  │(held)│ ___  │ ___  │ ___  │
+         *                 └──────┴──────┴──────┴──────┘          └──────┴──────┴──────┴──────┴──────┘
+         *
+         * QMK → ZMK key mapping for this layer:
+         * QMK PORTED FEATURES:
+         *   UG_TOGG → &rgb_ug RGB_TOG     (toggle RGB underglow on/off)
+         *   UG_PREV → &rgb_ug RGB_EFR     (previous RGB effect)
+         *   UG_NEXT → &rgb_ug RGB_EFF     (next RGB effect)
+         *   LM_BRID → &rgb_ug RGB_BRD     (decrease brightness)
+         *   LM_BRIU → &rgb_ug RGB_BRI     (increase brightness)
+         *   KC_UNDO → &kp LC(Z)    (Ctrl+Z — for Windows/Linux)
+         *   KC_CUT  → &kp LC(X)    (Ctrl+X — for Windows/Linux)
+         *   KC_COPY → &kp LC(C)    (Ctrl+C — for Windows/Linux)
+         *   KC_PASTE→ &kp LC(V)    (Ctrl+V — for Windows/Linux)
+         *   KC_PGUP → &kp PG_UP    (Page Up)
+         *   KC_PGDN → &kp PG_DN    (Page Down)
+         *   KC_LEFT/DOWN/UP/RGHT → &kp LEFT / DOWN / UP / RIGHT
+         *
+         *   NOTE FOR macOS: Replace LC() with LG() for Cmd instead of Ctrl:
+         *     &kp LG(Z) for Undo, &kp LG(X) for Cut, etc.
+         *
+         * NEW ZMK-ONLY FEATURES (not available in QMK):
+         *
+         *   BLUETOOTH (row 0 left side):
+         *   &bt BT_SEL 0-4  = Select Bluetooth profile 0 through 4
+         *                     You can pair up to 5 different devices and switch between them!
+         *                     Profile 0 = key "1" position, Profile 4 = key "5" position.
+         *   &bt BT_CLR      = Clear current BT profile pairing (unpairs the device)
+         *   &bt BT_CLR_ALL  = Clear ALL BT pairings (nuclear option — unpairs everything)
+         *
+         *   OUTPUT SWITCHING (row 1 left side):
+         *   &out OUT_USB    = Force output over USB cable (wired mode)
+         *   &out OUT_BLE    = Force output over Bluetooth (wireless mode)
+         *                     Useful when you have both USB and BT connected.
+         *
+         *   SYSTEM CONTROLS (row 3 right side):
+         *   &sys_reset      = Reset the MCU (like unplugging and re-plugging)
+         *   &soft_off        = Ultra-low-power off. Requires physical button to wake.
+         *   &bootloader     = Enter bootloader mode for flashing new firmware.
+         *                     ⚠️ Put these on hard-to-reach combos to avoid accidents!
+         *
+         *   RGB CONTROLS (row 0 right side):
+         *   &rgb_ug RGB_TOG = Toggle underglow on/off
+         *   &rgb_ug RGB_EFR/EFF = Previous/Next effect
+         *   &rgb_ug RGB_SPI/SPD = Speed up/slow down animation
+         */
+        layer_move {
+            display-name = "MOVE";
             bindings = <
-&kp TILDE  &bt BT_SEL 0  &bt BT_SEL 1    &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4    &mmv MOVE_UP     &kp F6  &kp F7  &kp F8      &kp F9     &kp F10      &trans
-&trans     &bt BT_CLR    &bt BT_CLR_ALL  &trans        &trans        &trans          &mmv MOVE_DOWN   &trans  &trans  &kp F11     &kp F12    &kp UNDER    &kp PLUS
-&trans     &out OUT_USB  &out OUT_BLE    &trans        &trans        &trans          &mmv MOVE_LEFT   &trans  &trans  &trans      &trans     &kp LBRC     &kp RBRC
-&trans     &sys_reset    &trans          &bootloader   &trans        &trans          &mmv MOVE_RIGHT  &trans  &trans  &sys_reset  &soft_off  &bootloader  &trans
-&trans     &trans        &trans          &trans        &trans        &trans          &mkp LCLK        &trans  &trans  &trans      &trans     &trans
+// ┌─ Left Half (6 keys) ───────────────────────────────────────────────────────────────┐ ┌─────Mid──────┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────────────────────────┐
+    &trans  &none         &none           &none         &none            &none             &mmv MOVE_UP      &none            &none            &none            &none            &none            &trans
+    &trans  &none         &none           &none         &none            &none             &mmv MOVE_DOWN    &kp PG_UP        &none            &kp UP           &none            &none            &trans
+    &trans  &none         &none           &none         &none            &none             &mmv MOVE_LEFT    &kp PG_DN        &kp LEFT         &kp DOWN         &kp RIGHT        &none            &trans
+    &trans  &kp LC(Z)     &kp LC(X)       &kp LC(C)     &kp LC(V)        &none             &mmv MOVE_RIGHT   &kp HOME         &kp END          &none            &none            &none            &trans
+    &trans  &trans        &trans          &trans        &trans           &trans            &mkp LCLK         &trans           &trans           &trans           &trans           &trans
             >;
 
             sensor-bindings = <&scroll_encoder>;
         };
 
-        layer_3 {
+        layer_adjust {
+            display-name = "ADJUST";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans
+    &trans  &bt BT_SEL 0  &bt BT_SEL 1    &bt BT_SEL 2  &bt BT_SEL 3     &bt BT_SEL 4      &none             &rgb_ug RGB_TOG  &rgb_ug RGB_EFR  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &trans
+    &trans  &bt BT_CLR    &bt BT_CLR_ALL  &out OUT_USB  &out OUT_BLE     &out OUT_TOG      &none             &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &rgb_ug RGB_SAI  &rgb_ug RGB_SAD
+    &trans  &none         &none           &none         &none            &none             &none             &rgb_ug RGB_ON   &rgb_ug RGB_OFF  &none            &none            &none            &trans
+    &trans  &none         &none           &none         &none            &none             &none             &none            &none            &td_sys_reset_safe  &td_soft_off_safe  &td_bootloader_safe  &trans
+    &trans  &trans        &trans          &trans        &trans           &trans            &none             &trans           &trans           &trans           &trans           &trans
             >;
+
+            sensor-bindings = <&scroll_encoder>;
+        };
+
+        /* ══════════════════════════════════════════════════════════════════════
+         * LAYER 3 — NUMPAD
+         * ══════════════════════════════════════════════════════════════════════
+         * Activated by HOLDING the TAB key (lt 3 TAB on Layer 0).
+         * Tap TAB = normal Tab. Hold TAB = activates this numpad layer.
+         *
+         * ┌────────┬──────┬──────┬──────┬──────┬──────┐          ┌──────┬──────┬──────┬──────┬──────┬──────┐
+         * │  ___   │      │      │      │      │      │  [___]  │ ___  │NumLk │      │      │      │      │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │        │      │      │      │      │      │  [___]  │  ^   │  7   │  8   │  9   │  *   │      │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │ (held) │      │      │      │      │      │  [___]  │  -   │  4   │  5   │  6   │  =   │  |   │
+         * ├────────┼──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┼──────┤
+         * │        │      │      │      │      │      │  [___]  │  +   │  1   │  2   │  3   │  /   │ ___  │
+         * └────────┴──────┼──────┼──────┼──────┼──────┤          ├──────┼──────┼──────┼──────┼──────┘
+         *    [___]        │ ___  │ ___  │ ___  │ ___  │  ___     │ ___  │ ___  │  0   │  .   │ ___  │ ___  │
+         *                 └──────┴──────┴──────┴──────┘          └──────┴──────┴──────┴──────┴──────┘
+         *
+         * QMK → ZMK key mapping for this layer:
+         *   KC_NUM  → &kp KP_NUM          (NumLock toggle)
+         *   KC_CIRC → &kp CARET           (^ character, internally LS(N6))
+         *   KC_P0   → &kp KP_N0           (numpad 0 — NOTE: ZMK uses KP_N0, not KP_0)
+         *   KC_P1   → &kp KP_N1           (numpad 1)
+         *   ...
+         *   KC_P9   → &kp KP_N9           (numpad 9)
+         *   KC_PDOT → &kp KP_DOT          (numpad decimal point)
+         *   KC_ASTR → &kp KP_MULTIPLY     (numpad multiply)
+         *   KC_PLUS → &kp KP_PLUS         (numpad plus)
+         *   KC_MINS → &kp KP_MINUS        (numpad minus)
+         *   KC_EQL  → &kp KP_EQUAL        (numpad equals)
+         *   KC_PIPE → &kp PIPE            (pipe — LS(BSLH))
+         *   KC_SLSH → &kp KP_DIVIDE       (numpad divide)
+         */
+        layer_numpad {
+            display-name = "NUMPAD";
+            bindings = <
+// ┌─ Left Half (6 keys) ────────────────────────┐ ┌───Mid───┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
+    &trans  &none   &none   &none   &none   &none    &trans     &trans        &kp KP_NUM   &none       &none       &none            &none
+    &none   &none   &none   &none   &none   &none    &trans     &kp CARET     &kp KP_N7    &kp KP_N8   &kp KP_N9   &kp KP_MULTIPLY  &none
+    &none   &none   &none   &none   &none   &none    &trans     &kp KP_MINUS  &kp KP_N4    &kp KP_N5   &kp KP_N6   &kp KP_EQUAL     &kp PIPE
+    &none   &none   &none   &none   &none   &none    &trans     &kp KP_PLUS   &kp KP_N1    &kp KP_N2   &kp KP_N3   &kp KP_DIVIDE    &trans
+    &trans  &trans  &trans  &trans  &trans  &trans   &trans     &trans        &kp KP_N0    &kp KP_DOT  &trans      &trans
+            >;
+
+            sensor-bindings = <&scroll_encoder>;
         };
     };
 };
-
-
-
