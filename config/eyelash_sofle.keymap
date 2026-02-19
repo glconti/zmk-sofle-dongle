@@ -482,19 +482,6 @@
             sensor-bindings = <&scroll_encoder>;
         };
 
-        layer_adjust {
-            display-name = "ADJUST";
-            bindings = <
-    &trans  &bt BT_SEL 0  &bt BT_SEL 1    &bt BT_SEL 2  &bt BT_SEL 3     &bt BT_SEL 4      &none             &rgb_ug RGB_TOG  &rgb_ug RGB_EFR  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &trans
-    &trans  &bt BT_CLR    &bt BT_CLR_ALL  &out OUT_USB  &out OUT_BLE     &out OUT_TOG      &none             &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &rgb_ug RGB_SAI  &rgb_ug RGB_SAD
-    &trans  &none         &none           &none         &none            &none             &none             &rgb_ug RGB_ON   &rgb_ug RGB_OFF  &none            &none            &none            &trans
-    &trans  &none         &none           &none         &none            &none             &none             &none            &none            &td_sys_reset_safe  &td_soft_off_safe  &td_bootloader_safe  &trans
-    &trans  &trans        &trans          &trans        &trans           &trans            &none             &trans           &trans           &trans           &trans           &trans
-            >;
-
-            sensor-bindings = <&scroll_encoder>;
-        };
-
         /* ══════════════════════════════════════════════════════════════════════
          * LAYER 3 — NUMPAD
          * ══════════════════════════════════════════════════════════════════════
@@ -537,6 +524,19 @@
     &none   &none   &none   &none   &none   &none    &trans     &kp KP_MINUS  &kp KP_N4    &kp KP_N5   &kp KP_N6   &kp KP_EQUAL     &kp PIPE
     &none   &none   &none   &none   &none   &none    &trans     &kp KP_PLUS   &kp KP_N1    &kp KP_N2   &kp KP_N3   &kp KP_DIVIDE    &trans
     &trans  &trans  &trans  &trans  &trans  &trans   &trans     &trans        &kp KP_N0    &kp KP_DOT  &trans      &trans
+            >;
+
+            sensor-bindings = <&scroll_encoder>;
+        };
+
+        layer_adjust {
+            display-name = "ADJUST";
+            bindings = <
+    &trans  &bt BT_SEL 0  &bt BT_SEL 1    &bt BT_SEL 2  &bt BT_SEL 3     &bt BT_SEL 4      &none             &rgb_ug RGB_TOG  &rgb_ug RGB_EFR  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &trans
+    &trans  &bt BT_CLR    &bt BT_CLR_ALL  &out OUT_USB  &out OUT_BLE     &out OUT_TOG      &none             &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &rgb_ug RGB_SAI  &rgb_ug RGB_SAD
+    &trans  &none         &none           &none         &none            &none             &none             &rgb_ug RGB_ON   &rgb_ug RGB_OFF  &none            &none            &none            &trans
+    &trans  &none         &none           &none         &none            &none             &none             &none            &none            &td_sys_reset_safe  &td_soft_off_safe  &td_bootloader_safe  &trans
+    &trans  &trans        &trans          &trans        &trans           &trans            &none             &trans           &trans           &trans           &trans           &trans
             >;
 
             sensor-bindings = <&scroll_encoder>;
