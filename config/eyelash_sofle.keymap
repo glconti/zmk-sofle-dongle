@@ -319,9 +319,9 @@
          *   KC_COMM         → &kp COMMA            (comma)
          *   KC_SLSH         → &kp FSLH             (forward slash)
          *
-         * MIDDLE COLUMN: The joystick/trackball 5-way switch. Mapped to arrow keys
-         * on Layer 0 so it works as a directional pad. On other layers, it can be
-         * remapped to mouse movement (&mmv) or other functions.
+         * MIDDLE COLUMN: The joystick/trackball 5-way switch. On Layer 0 it is
+         * mapped to mouse movement (&mmv) in all four directions, and center click
+         * is mouse middle-click for browser-style pan/360 navigation.
          *
          * ENCODER: Rotate = Volume Up/Down. Click = MUTE (or double-click = PLAY).
          */
@@ -329,11 +329,11 @@
             display-name = "QWERTY";
             bindings = <
 // ┌─ Left Half (6 keys) ─────────────────────────────────────────────────┐ ┌───Mid───┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
-    &td_esc_grv    &kp N1     &kp N2    &kp N3           &kp N4  &kp N5      &kp UP      &kp N6     &kp N7  &kp N8           &kp N9    &kp N0     &kp MINUS
-    &kp DEL        &kp Q      &kp W     &kp E            &kp R   &kp T       &kp DOWN    &kp Y      &kp U   &kp I            &kp O     &kp P      &kp BSPC
-    &lt 3 TAB      &kp A      &kp S     &kp D            &kp F   &kp G       &kp LEFT    &kp H      &kp J   &kp K            &kp L     &kp SEMI   &kp SQT
-    &kp LGUI       &kp Z      &kp X     &kp C            &kp V   &kp B       &kp RIGHT   &kp N      &kp M   &kp COMMA        &kp DOT   &kp FSLH   &kp ENTER
-    &td_mute_play  &kp LCTRL  &kp LALT  &td_lshift_caps  &mo 1   &kp SPACE   &kp HOME    &kp SPACE  &mo 2   &td_rshift_caps  &kp RALT  &kp RCTRL
+    &td_esc_grv    &kp N1     &kp N2    &kp N3           &kp N4  &kp N5      &mmv MOVE_UP      &kp N6     &kp N7  &kp N8           &kp N9    &kp N0     &kp MINUS
+    &kp DEL        &kp Q      &kp W     &kp E            &kp R   &kp T       &mmv MOVE_DOWN    &kp Y      &kp U   &kp I            &kp O     &kp P      &kp BSPC
+    &lt 3 TAB      &kp A      &kp S     &kp D            &kp F   &kp G       &mmv MOVE_LEFT    &kp H      &kp J   &kp K            &kp L     &kp SEMI   &kp SQT
+    &kp LGUI       &kp Z      &kp X     &kp C            &kp V   &kp B       &mmv MOVE_RIGHT   &kp N      &kp M   &kp COMMA        &kp DOT   &kp FSLH   &kp ENTER
+    &td_mute_play  &kp LCTRL  &kp LALT  &td_lshift_caps  &mo 1   &kp SPACE   &mkp MCLK         &kp SPACE  &mo 2   &td_rshift_caps  &kp RALT  &kp RCTRL
             >;
 
             /* ENCODER BINDING (Layer 0):
