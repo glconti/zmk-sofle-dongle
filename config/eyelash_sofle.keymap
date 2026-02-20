@@ -242,6 +242,13 @@
             tapping-term-ms = <220>;
             bindings = <&none>, <&bootloader>;
         };
+
+        td_bt_clr_all_safe: td_bt_clr_all_safe {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <220>;
+            bindings = <&none>, <&bt BT_CLR_ALL>;
+        };
     };
 
     conditional_layers {
@@ -532,12 +539,12 @@
         layer_adjust {
             display-name = "ADJUST";
             bindings = <
-// ┌─ Left Half (6 keys) ─────────────────────────────────────────────────────────────┐ ┌───Mid───┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
-    &trans  &bt BT_SEL 0  &bt BT_SEL 1    &bt BT_SEL 2  &bt BT_SEL 3     &bt BT_SEL 4      &none      &rgb_ug RGB_TOG  &rgb_ug RGB_EFR  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &trans
-    &trans  &bt BT_CLR    &bt BT_CLR_ALL  &out OUT_USB  &out OUT_BLE     &out OUT_TOG      &none      &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &rgb_ug RGB_SAI  &rgb_ug RGB_SAD
-    &trans  &none         &none           &none         &none            &none             &none      &rgb_ug RGB_ON   &rgb_ug RGB_OFF  &none            &none            &none            &trans
-    &trans  &none         &none           &none         &none            &none             &none      &none            &none            &td_sys_reset_safe  &td_soft_off_safe  &td_bootloader_safe  &trans
-    &trans  &trans        &trans          &trans        &trans           &trans            &none      &trans           &trans           &trans           &trans           &trans
+// ┌─ Left Half (6 keys) ──────────────────────────────────────────────────────────────────┐ ┌───Mid───┐ ┌─ Right Half (6 keys) ──────────────────────────────────────────────────┐
+    &trans  &bt BT_SEL 0  &bt BT_SEL 1         &bt BT_SEL 2  &bt BT_SEL 3     &bt BT_SEL 4      &none      &rgb_ug RGB_TOG  &rgb_ug RGB_EFR  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &trans
+    &trans  &bt BT_CLR    &td_bt_clr_all_safe  &out OUT_USB  &out OUT_BLE     &out OUT_TOG      &none      &rgb_ug RGB_BRI  &rgb_ug RGB_BRD  &rgb_ug RGB_HUI  &rgb_ug RGB_HUD  &rgb_ug RGB_SAI  &rgb_ug RGB_SAD
+    &trans  &none         &none                &none         &none            &none             &none      &rgb_ug RGB_ON   &rgb_ug RGB_OFF  &none            &none            &none            &trans
+    &trans  &none         &none                &none         &none            &none             &none      &none            &none            &td_sys_reset_safe  &td_soft_off_safe  &td_bootloader_safe  &trans
+    &trans  &trans        &trans               &trans        &trans           &trans            &none      &trans           &trans           &trans           &trans           &trans
             >;
 
             sensor-bindings = <&scroll_encoder>;
