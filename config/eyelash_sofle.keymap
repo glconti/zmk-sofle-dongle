@@ -222,6 +222,13 @@
             bindings = <&kp C_MUTE>, <&kp C_PP>;
         };
 
+        td_mic_mute: td_mic_mute {
+            compatible = "zmk,behavior-tap-dance";
+            #binding-cells = <0>;
+            tapping-term-ms = <200>;
+            bindings = <&kp LG(LA(K))>, <&kp LG(LA(K))>;
+        };
+
         td_sys_reset_safe: td_sys_reset_safe {
             compatible = "zmk,behavior-tap-dance";
             #binding-cells = <0>;
@@ -483,7 +490,7 @@
     &trans  &none         &none           &none         &none            &none             &mmv MOVE_DOWN    &kp PG_UP        &none            &kp UP           &none            &none            &trans
     &trans  &none         &none           &none         &none            &none             &mmv MOVE_LEFT    &kp PG_DN        &kp LEFT         &kp DOWN         &kp RIGHT        &none            &trans
     &trans  &kp LC(Z)     &kp LC(X)       &kp LC(C)     &kp LC(V)        &none             &mmv MOVE_RIGHT   &kp HOME         &kp END          &none            &none            &none            &trans
-    &trans  &trans        &trans          &trans        &trans           &trans            &mkp LCLK         &trans           &trans           &trans           &trans           &trans
+    &td_mic_mute  &trans  &trans          &trans        &trans           &trans            &mkp LCLK         &trans           &trans           &trans           &trans           &trans
             >;
 
             sensor-bindings = <&scroll_encoder>;
